@@ -669,11 +669,17 @@
 				<div>
 					<p class="font-bold">
 						<FileImage class="h-6 w-6 inline-block mr-2 text-primary" />
-						{t.domain ?? 'SVG Converter'}
+						<a href="/">{t.domain ?? 'SVG Converter'}</a>
 					</p>
 					<p>© {new Date().getFullYear()}</p>
 					<p>{t.footer ?? 'All rights reserved'}</p>
 					<p class="mt-4 text-sm text-base-content/70">{t.privacy ?? ''}</p>
+					<ul class="flex space-x-4 mt-4">
+						<li><a href="/privacy">Privacy Policy</a></li>
+						<li><a href="/terms">Terms of Use</a></li>
+						<li><a href="/about">About Us</a></li>
+						<li><a href="/contact">Contact</a></li>
+					</ul>
 				</div>
 			</footer>
 		</div>
