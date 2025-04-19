@@ -250,11 +250,26 @@
       </div>
     </div>
 
-    <p class="text-xl text-base-content/70 text-center mb-8 max-w-3xl mx-auto">{seoDescription || t.description}</p>
+    
 
     <div class="max-w-5xl mx-auto">
+
+      <!-- Conversion Info Card -->
+      {#if conversionInfo?.title}
+      <div class="card bg-base-100 mb-8" in:fade={{ duration: 300 }}>
+        <div class="card-body">
+          <h2 class="card-title text-2xl">
+            {conversionInfo.title}
+          </h2>
+          <p class="text-base-content/80">
+            {conversionInfo.description}
+          </p>
+        </div>
+      </div>
+      {/if}
+
       <!-- Format Tabs -->
-      <div class="tabs tabs-boxed bg-base-100 mb-8 flex justify-center p-1">
+      <div class="card tabs tabs-border bg-base-100 mb-2 flex justify-center p-1">
         {#each Object.entries(t.seo?.conversions || {}) as [format, info]}
           <button 
             class="tab tab-lg gap-2 text-lg font-medium {activeTab === format ? 'tab-active' : ''}" 
@@ -289,23 +304,9 @@
         {/each}
       </div>
 
-      <!-- Conversion Info Card -->
-      {#if conversionInfo?.title}
-      <div class="card bg-base-100 shadow-lg mb-8" in:fade={{ duration: 300 }}>
-        <div class="card-body">
-          <h2 class="card-title text-2xl">
-            {conversionInfo.title}
-          </h2>
-          <p class="text-base-content/80">
-            {conversionInfo.description}
-          </p>
-        </div>
-      </div>
-      {/if}
-
       <!-- Drop Zone with integrated buttons -->
       <div
-        class="border-3 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors bg-base-100 hover:bg-base-200 {isDragging ? 'border-primary bg-primary/10' : 'border-base-300'} mb-8"
+        class="border-3 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors bg-base-100 hover:bg-base-300 {isDragging ? 'border-primary bg-primary/10' : 'border-base-300'} mb-8"
         on:dragover={handleDragOver}
         on:dragleave={handleDragLeave}
         on:drop={handleDrop}
@@ -357,8 +358,8 @@
           
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {#each convertedFiles as file, i (file.name + i + file.format)}
-              <div class="card bg-base-100 shadow-xl overflow-hidden transition-all hover:shadow-2xl" in:fade={{ duration: 300, delay: i * 50 }}>
-                <figure class="relative pt-[100%] bg-base-200">
+              <div class="card bg-base-100 border border-base-300 overflow-hidden transition-all hover:shadow-md" in:fade={{ duration: 300, delay: i * 50 }}>
+                <figure class="relative pt-[100%] bg-base-300">
                   <img
                     src={file.url || file.preview}
                     alt={file.name}
