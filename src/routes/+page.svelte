@@ -2,16 +2,31 @@
   import { onMount } from 'svelte';
   import Logo from '$lib/components/Logo.svelte';
   import { languages, type Language, type Format } from '$lib/i18n';
+  import { fade, fly } from 'svelte/transition';
+  import SEO from '$lib/components/SEO.svelte';
   
   let files: File[] = [];
   let isDragging = false;
-  let convertedFiles: { name: string; url: string; preview?: string; format: Format }[] = [];
+  let convertedFiles: { 
+    name: string; 
+    url: string; 
+    preview?: string; 
+    format: Format;
+    originalFile?: File;
+    size?: string;
+  }[] = [];
   let selectedFormat: Format = 'png';
   let lang: Language = 'en';
   let t = languages[lang];
   let activeTab: Format = 'png';
   let isConverting = false;
   let convertingIndexes: number[] = [];
+  let fileInputRef: HTMLInputElement;
+  
+  // Get SEO content based on active tab and language
+  $: seoTitle = t.seo?.baseTitle?.replace('{format}', t.formats[activeTab]) + ' - ' + t.seo?.domain;
+  $: seoDescription = t.seo?.conversions?.[activeTab]?.description || '';
+  $: conversionInfo = t.seo?.conversions?.[activeTab] || {};
 
   function handleDragOver(e: DragEvent) {
     e.preventDefault();
@@ -33,6 +48,8 @@
     const input = e.target as HTMLInputElement;
     if (input.files) {
       handleFiles(Array.from(input.files));
+      // Reset the input value to allow selecting the same file again
+      input.value = '';
     }
   }
 
@@ -44,6 +61,12 @@
       if (file.preview) URL.revokeObjectURL(file.preview);
     });
     convertedFiles = [];
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
   async function createPreview(file: File): Promise<string> {
@@ -61,7 +84,7 @@
       const filesWithPreviews = await Promise.all(
         validFiles.map(async (file) => {
           const preview = await createPreview(file);
-          return { file, preview };
+          return { file, preview, size: formatFileSize(file.size) };
         })
       );
       
@@ -72,7 +95,9 @@
         name: f.file.name,
         url: '', // Will be set after conversion
         preview: f.preview,
-        format: activeTab
+        format: activeTab,
+        originalFile: f.file,
+        size: f.size
       }));
       
       convertedFiles = [...convertedFiles, ...newConvertedFiles];
@@ -137,7 +162,7 @@
       case 'png': return '.png';
       case 'jpg': return '.jpg';
       case 'pdf': return '.pdf';
-      case 'optimize': return '.svg';
+      case 'compress': return '.svg';
       default: return '.png';
     }
   }
@@ -163,34 +188,61 @@
   function handleTabClick(format: Format) {
     activeTab = format;
     selectedFormat = format;
+    
+    // Update existing files to the new format
+    if (convertedFiles.length > 0) {
+      // Create a copy of the files array to trigger reactivity
+      const updatedFiles = convertedFiles.map(file => ({
+        ...file,
+        format,
+        url: '' // Reset URL to trigger reconversion
+      }));
+      
+      convertedFiles = updatedFiles;
+      
+      // Reconvert all files with the new format
+      convertFiles(updatedFiles, 0);
+    }
   }
 
   // Cleanup URLs when component is destroyed
+  let cleanup = () => {
+    convertedFiles.forEach(file => {
+      if (file.url) URL.revokeObjectURL(file.url);
+      if (file.preview) URL.revokeObjectURL(file.preview);
+    });
+  };
+  
   onMount(() => {
-    return () => {
-      convertedFiles.forEach(file => {
-        if (file.url) URL.revokeObjectURL(file.url);
-        if (file.preview) URL.revokeObjectURL(file.preview);
-      });
-    };
+    return cleanup;
   });
 </script>
+
+<SEO 
+  title={seoTitle || 'SVG into PNG Converter'} 
+  description={seoDescription || 'Convert SVG files to various formats'} 
+  domain={t.seo?.domain || 'svgintotopng.com'} 
+/>
 
 <div class="min-h-screen bg-base-200">
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
-      <div class="flex items-center gap-2">
-        <Logo size="h-8 w-8" />
-        <h1 class="text-4xl font-bold text-primary">{t.title}</h1>
+      <div class="flex items-center gap-3">
+        <Logo size="h-10 w-10" />
+        <h1 class="text-4xl font-bold text-primary">
+          <span class="text-primary">SVG</span>
+          <span class="text-base-content opacity-70">to</span>
+          <span class="text-accent">{activeTab.toUpperCase()}</span>
+        </h1>
       </div>
       <div class="dropdown dropdown-end">
         <label tabindex="0" class="btn btn-ghost">
           {lang.toUpperCase()}
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
           </svg>
         </label>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
           {#each Object.keys(languages) as langCode}
             <li><button class="btn btn-ghost justify-start" on:click={() => setLanguage(langCode as Language)}>{langCode.toUpperCase()}</button></li>
           {/each}
@@ -198,128 +250,207 @@
       </div>
     </div>
 
-    <p class="text-lg text-base-content/70 text-center mb-8">{t.description}</p>
+    <p class="text-xl text-base-content/70 text-center mb-8 max-w-3xl mx-auto">{seoDescription || t.description}</p>
 
     <div class="max-w-5xl mx-auto">
       <!-- Format Tabs -->
-      <div class="tabs tabs-boxed bg-base-100 mb-8 flex justify-center">
-        <button 
-          class="tab tab-lg {activeTab === 'png' ? 'tab-active' : ''}" 
-          on:click={() => handleTabClick('png')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {t.formats.png}
-        </button>
-        <button 
-          class="tab tab-lg {activeTab === 'jpg' ? 'tab-active' : ''}" 
-          on:click={() => handleTabClick('jpg')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {t.formats.jpg}
-        </button>
-        <button 
-          class="tab tab-lg {activeTab === 'pdf' ? 'tab-active' : ''}" 
-          on:click={() => handleTabClick('pdf')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          {t.formats.pdf}
-        </button>
-        <button 
-          class="tab tab-lg {activeTab === 'optimize' ? 'tab-active' : ''}" 
-          on:click={() => handleTabClick('optimize')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          {t.formats.optimize}
-        </button>
+      <div class="tabs tabs-boxed bg-base-100 mb-8 flex justify-center p-1">
+        {#each Object.entries(t.seo?.conversions || {}) as [format, info]}
+          <button 
+            class="tab tab-lg gap-2 text-lg font-medium {activeTab === format ? 'tab-active' : ''}" 
+            on:click={() => handleTabClick(format as Format)}
+          >
+            {#if info?.icon === 'image'}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            {:else if info?.icon === 'file-text'}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            {:else if info?.icon === 'zap'}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            {:else if info?.icon === 'eye'}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            {/if}
+            {t.formats[format as Format]}
+          </button>
+        {/each}
       </div>
+
+      <!-- Conversion Info Card -->
+      {#if conversionInfo?.title}
+      <div class="card bg-base-100 shadow-lg mb-8" in:fade={{ duration: 300 }}>
+        <div class="card-body">
+          <h2 class="card-title text-2xl">
+            {conversionInfo.title}
+          </h2>
+          <p class="text-base-content/80">
+            {conversionInfo.description}
+          </p>
+        </div>
+      </div>
+      {/if}
 
       <!-- Drop Zone with integrated buttons -->
       <div
-        class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors bg-base-100 {isDragging ? 'border-primary bg-primary/10' : 'border-base-300'} mb-8"
+        class="border-3 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors bg-base-100 hover:bg-base-200 {isDragging ? 'border-primary bg-primary/10' : 'border-base-300'} mb-8"
         on:dragover={handleDragOver}
         on:dragleave={handleDragLeave}
         on:drop={handleDrop}
+        on:click={() => fileInputRef?.click()}
+        in:fly={{ y: 20, duration: 400 }}
       >
-        <div class="flex flex-col items-center justify-center gap-4">
-          <Logo />
+        <div class="flex flex-col items-center justify-center gap-6">
+          <Logo size="h-16 w-16" />
           <div>
-            <p class="text-lg font-medium">{t.dragDrop}</p>
-            <p class="text-sm text-base-content/70">{t.or}</p>
+            <p class="text-xl font-medium">{t.dragDrop}</p>
+            <p class="text-base text-base-content/70 mt-2">{t.or}</p>
           </div>
           <div class="flex gap-4">
-            <label class="btn btn-primary btn-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" />
+            <label class="btn btn-primary btn-lg text-lg gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
               {t.browseFiles}
-              <input type="file" accept=".svg" class="hidden" multiple on:change={handleFileInput} />
+              <input 
+                type="file" 
+                accept=".svg" 
+                class="hidden" 
+                multiple 
+                on:change={handleFileInput} 
+                bind:this={fileInputRef}
+              />
             </label>
-            {#if files.length > 0}
-              <button class="btn btn-error btn-lg" on:click={clearQueue}>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-                {t.clearFiles}
-              </button>
-            {/if}
           </div>
         </div>
       </div>
 
       <!-- File Grid -->
       {#if convertedFiles.length > 0}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {#each convertedFiles as file, i (file.name + i)}
-            <div class="card bg-base-100 shadow-xl">
-              <figure class="relative pt-[100%]">
-                <img
-                  src={file.preview}
-                  alt={file.name}
-                  class="absolute inset-0 w-full h-full object-contain p-2"
-                />
-                <!-- Format overlay - more visible with background -->
-                <div class="absolute top-2 left-2 bg-primary text-primary-content px-3 py-1 rounded-lg text-sm font-bold shadow-md">
-                  {file.format.toUpperCase()}
-                </div>
-                {#if convertingIndexes.includes(i) || (isConverting && !file.url)}
-                  <div class="absolute inset-0 bg-base-100/80 flex items-center justify-center">
-                    <span class="loading loading-spinner loading-lg text-primary"></span>
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">{convertedFiles.length} {convertedFiles.length === 1 ? 'File' : 'Files'}</h2>
+            <button class="btn btn-error btn-sm gap-2" on:click={clearQueue}>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+              {t.clearFiles || 'Clear All'}
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {#each convertedFiles as file, i (file.name + i + file.format)}
+              <div class="card bg-base-100 shadow-xl overflow-hidden transition-all hover:shadow-2xl" in:fade={{ duration: 300, delay: i * 50 }}>
+                <figure class="relative pt-[100%] bg-base-200">
+                  <img
+                    src={file.url || file.preview}
+                    alt={file.name}
+                    class="absolute inset-0 w-full h-full object-contain p-2"
+                  />
+                  <!-- Format badge -->
+                  <div class="absolute top-3 left-3 badge badge-lg badge-primary text-primary-content font-bold">
+                    {t.formats[file.format]}
                   </div>
-                {/if}
-              </figure>
-              <div class="card-body p-4">
-                <h3 class="card-title text-sm truncate">{file.name}</h3>
-                <div class="card-actions justify-end">
-                  <a
-                    href={file.url}
-                    download={file.name}
-                    class="btn btn-primary btn-sm {!file.url && 'btn-disabled'}"
-                  >
-                    Download
-                  </a>
+                  
+                  <!-- File size badge -->
+                  {#if file.size}
+                    <div class="absolute top-3 right-3 badge badge-lg badge-ghost">
+                      {file.size}
+                    </div>
+                  {/if}
+                  
+                  {#if convertingIndexes.includes(i) || (isConverting && !file.url)}
+                    <div class="absolute inset-0 bg-base-100/80 flex items-center justify-center backdrop-blur-sm">
+                      <div class="flex flex-col items-center gap-2">
+                        <span class="loading loading-spinner loading-lg text-primary"></span>
+                        <span class="font-medium">Converting...</span>
+                      </div>
+                    </div>
+                  {/if}
+                </figure>
+                <div class="card-body p-4">
+                  <h3 class="card-title text-base truncate">{file.name}</h3>
+                  <div class="card-actions justify-end mt-2">
+                    <a
+                      href={file.url}
+                      download={file.name}
+                      class="btn btn-primary {!file.url && 'btn-disabled'} gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          {/each}
+            {/each}
+          </div>
         </div>
 
         <div class="flex justify-center mt-8">
-          <button class="btn btn-primary btn-lg" on:click={downloadAll}>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+          <button class="btn btn-primary btn-lg gap-2 text-lg" on:click={downloadAll}>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             {t.downloadAll}
           </button>
         </div>
       {/if}
     </div>
+    
+    <!-- SEO Content -->
+    {#if t.seo?.steps?.title && conversionInfo?.howToConvert}
+    <div class="mt-16 prose prose-lg max-w-3xl mx-auto">
+      <h2>{conversionInfo.title}</h2>
+      <p>
+        {t.description}
+      </p>
+      
+      <h3>{t.seo.steps.title.replace('{format}', t.formats[activeTab])}</h3>
+      <ol>
+        {#each conversionInfo.howToConvert as step}
+          <li>{step}</li>
+        {/each}
+      </ol>
+      
+      <h3>Why {conversionInfo.title}?</h3>
+      <p>{conversionInfo.whyConvert}</p>
+      
+      <p>{t.seo?.privacy}</p>
+    </div>
+    {/if}
+    
+    <!-- Footer -->
+    <footer class="footer footer-center p-10 mt-16 text-base-content">
+      <div>
+        <p class="font-bold">
+          <Logo size="h-6 w-6 inline-block mr-2" /> {t.seo?.domain || 'SVG Converter'}
+        </p> 
+        <p>{t.seo?.footer?.since || '© 2023'}</p>
+        <p>{t.seo?.footer?.rights || 'All rights reserved'}</p>
+      </div>
+    </footer>
   </div>
 </div>
