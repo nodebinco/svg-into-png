@@ -4,9 +4,15 @@ export type Format = 'png' | 'jpg' | 'pdf' | 'compress' | 'view';
 interface ConversionInfo {
 	title: string;
 	description: string;
-	icon: string;
-	whyConvert: string;
-	howToConvert: string[];
+	descriptionHtml: string;
+	icon: 'image' | 'file-text' | 'zap' | 'eye';
+}
+
+interface StepInfo {
+	title: string;
+	upload?: string;
+	wait?: string;
+	download?: string;
 }
 
 interface Translation {
@@ -15,24 +21,27 @@ interface Translation {
 	dragDrop: string;
 	or: string;
 	browseFiles: string;
-	clearFiles: string;
+	selectedFiles: string;
 	convertTo: string;
 	downloadAll: string;
 	formats: Record<Format, string>;
+	clearFiles: string;
+	filesCount: string;
+	fileCount: string;
+	converting: string;
+	download: string;
+	viewerTitle: string;
+	viewerDescription: string;
+	uploadToView: string;
 	seo: {
 		baseTitle: string;
 		domain: string;
+		conversions: Record<Format, ConversionInfo>;
+		steps: StepInfo;
 		privacy: string;
 		footer: {
 			since: string;
 			rights: string;
-		};
-		conversions: Record<Format, ConversionInfo>;
-		steps: {
-			title: string;
-			upload: string;
-			wait: string;
-			download: string;
 		};
 	};
 }
@@ -40,11 +49,11 @@ interface Translation {
 export const languages: Record<Language, Translation> = {
 	en: {
 		title: 'SVG Converter',
-		description: 'Convert your SVG files to various formats instantly',
-		dragDrop: 'Drag & drop your SVG files here',
+		description: 'Convert your SVG files to various formats instantly online.',
+		dragDrop: 'Drag & drop SVG files here',
 		or: 'or',
 		browseFiles: 'Browse Files',
-		clearFiles: 'Clear Files',
+		selectedFiles: 'Files',
 		convertTo: 'Convert to',
 		downloadAll: 'Download All',
 		formats: {
@@ -54,98 +63,69 @@ export const languages: Record<Language, Translation> = {
 			compress: 'Compress',
 			view: 'View'
 		},
+		clearFiles: 'Clear All',
+		filesCount: '{count} Files',
+		fileCount: '{count} File',
+		converting: 'Converting...',
+		download: 'Download',
+		viewerTitle: 'SVG Viewer',
+		viewerDescription: 'Upload or drag & drop an SVG file to view its content.',
+		uploadToView: 'Upload SVG to View',
 		seo: {
-			baseTitle: 'SVG to {format} Converter',
+			baseTitle: 'Convert SVG to {format}',
 			domain: 'svgintopng.com',
-			privacy:
-				'All conversions happen in your browser - your files are never uploaded to our servers, ensuring complete privacy and security.',
-			footer: {
-				since: 'Free SVG conversion tools since 2023',
-				rights: '© 2023 svgintopng.com - All rights reserved'
-			},
 			conversions: {
 				png: {
-					title: 'SVG to PNG Converter',
-					description:
-						"Convert SVG vector graphics to PNG images with transparency support. Perfect for using vector graphics in applications that don't support SVG.",
-					icon: 'image',
-					whyConvert:
-						"PNG files support transparency and are widely compatible with all applications and websites. Converting SVG to PNG is useful when you need to use your vector graphics in applications that don't support SVG, or when you need a fixed-size raster image for specific purposes.",
-					howToConvert: [
-						'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-						'Wait for the automatic conversion to complete',
-						'Download your converted PNG file'
-					]
+					title: 'SVG to PNG Conversion',
+					description: 'Convert your SVG files to PNG images.',
+					descriptionHtml: `<p>Easily convert your <strong>SVG vector files</strong> into versatile <strong>PNG raster images</strong>. PNGs are ideal for web use, supporting transparency and lossless compression. Perfect for logos, icons, and graphics where scalability isn't the primary need after conversion.</p><p>Our tool ensures high-quality output, preserving the visual fidelity of your original SVG.</p>`,
+					icon: 'image'
 				},
 				jpg: {
-					title: 'SVG to JPG Converter',
-					description:
-						'Convert SVG files to JPG images with customizable quality. Ideal for web content and email attachments where file size matters.',
-					icon: 'image',
-					whyConvert:
-						'JPG files are highly compressed and ideal for photographs or complex images where file size matters. Converting SVG to JPG is useful when you need smaller file sizes for web use, email attachments, or when transparency is not required.',
-					howToConvert: [
-						'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-						'Wait for the automatic conversion to complete',
-						'Download your converted JPG file'
-					]
+					title: 'SVG to JPG Conversion',
+					description: 'Transform your SVG files into JPG format.',
+					descriptionHtml: `<p>Convert your <strong>SVG graphics</strong> into the widely supported <strong>JPG format</strong>. JPG is excellent for complex images with many colors, like photographs, using lossy compression to achieve smaller file sizes. Note that transparency is not supported in JPG.</p><p>Ideal for situations where file size is a major concern and transparency isn't needed.</p>`,
+					icon: 'image'
 				},
 				pdf: {
-					title: 'SVG to PDF Converter',
-					description:
-						'Convert SVG files to PDF documents while preserving vector quality. Perfect for creating printable documents from vector graphics.',
-					icon: 'file-text',
-					whyConvert:
-						"PDF files are perfect for documents and printable materials. Converting SVG to PDF maintains vector quality while creating a document format that's easy to share, print, and view on any device without special software.",
-					howToConvert: [
-						'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-						'Wait for the automatic conversion to complete',
-						'Download your converted PDF file'
-					]
+					title: 'SVG to PDF Conversion',
+					description: 'Convert your SVG files into PDF documents.',
+					descriptionHtml: `<p>Turn your <strong>Scalable Vector Graphics (SVG)</strong> into professional <strong>Portable Document Format (PDF)</strong> files. PDFs embed the vector data, ensuring your graphics remain sharp and scalable within the document, perfect for printing and sharing.</p><p>Great for technical drawings, reports, and documents requiring high fidelity graphics.</p>`,
+					icon: 'file-text'
 				},
 				compress: {
-					title: 'SVG Compression',
-					description:
-						'Compress SVG files by removing unnecessary data and reducing file size. Makes SVGs faster to load and easier to work with.',
-					icon: 'zap',
-					whyConvert:
-						'Compressing SVG files reduces their size by removing unnecessary data, optimizing paths, and minifying code. This makes your SVG files load faster on websites and applications while maintaining their vector quality.',
-					howToConvert: [
-						'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-						'Wait for the automatic compression to complete',
-						'Download your compressed SVG file'
-					]
+					title: 'Compress SVG Files',
+					description: 'Optimize and reduce the file size of your SVG files.',
+					descriptionHtml: `<p>Reduce the size of your <strong>SVG files</strong> significantly by optimizing their code. Our tool removes redundant information, cleans up code, and applies various optimization techniques using SVGO.</p><p>Compressed SVGs load faster and are more efficient, perfect for web usage while retaining scalability and quality.</p>`,
+					icon: 'zap'
 				},
 				view: {
 					title: 'SVG Viewer',
-					description:
-						'View and inspect SVG files directly in your browser. No installation required.',
-					icon: 'eye',
-					whyConvert:
-						'Viewing SVG files in a dedicated viewer allows you to inspect the vector graphics, check dimensions, and ensure quality before using them in your projects.',
-					howToConvert: [
-						'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-						'The SVG will be displayed instantly in the viewer',
-						'Inspect and download if needed'
-					]
+					description: 'Quickly view the contents of your SVG files.',
+					descriptionHtml: `<p>Use this tool to instantly preview your <strong>SVG files</strong>. See how your vector graphic renders without needing specialized software. Useful for quick checks and verifying file contents.</p>`,
+					icon: 'eye'
 				}
 			},
 			steps: {
-				title: 'How to Convert SVG to {format}',
-				upload:
-					'Upload your SVG file by dragging and dropping it or clicking the "Browse Files" button',
-				wait: 'Wait for the automatic conversion to complete',
-				download: 'Download your converted {format} file'
+				title: 'How to convert SVG to {format}',
+				upload: 'Upload your SVG file by dragging and dropping it or using the browse button.',
+				wait: 'Wait for the conversion/compression process to complete.',
+				download: 'Download your converted {format} file.'
+			},
+			privacy: 'Your files are processed securely and deleted from our servers after 1 hour.',
+			footer: {
+				since: '© 2024',
+				rights: 'All rights reserved.'
 			}
 		}
 	},
 	es: {
 		title: 'Convertidor SVG',
-		description: 'Convierte tus archivos SVG a varios formatos al instante',
+		description: 'Convierte tus archivos SVG a varios formatos al instante online.',
 		dragDrop: 'Arrastra y suelta tus archivos SVG aquí',
 		or: 'o',
 		browseFiles: 'Explorar Archivos',
-		clearFiles: 'Limpiar',
+		selectedFiles: 'Archivos',
 		convertTo: 'Convertir a',
 		downloadAll: 'Descargar Todo',
 		formats: {
@@ -155,98 +135,70 @@ export const languages: Record<Language, Translation> = {
 			compress: 'Comprimir',
 			view: 'Ver'
 		},
+		clearFiles: 'Limpiar',
+		filesCount: '{count} Archivos',
+		fileCount: '{count} Archivo',
+		converting: 'Convertiendo...',
+		download: 'Descargar',
+		viewerTitle: 'Visor de SVG',
+		viewerDescription: 'Carga o arrastra un archivo SVG para ver su contenido.',
+		uploadToView: 'Cargar SVG para Ver',
 		seo: {
 			baseTitle: 'Convertidor de SVG a {format}',
 			domain: 'svgintopng.com',
-			privacy:
-				'Todas las conversiones ocurren en tu navegador - tus archivos nunca se suben a nuestros servidores, garantizando total privacidad y seguridad.',
-			footer: {
-				since: 'Herramientas gratuitas de conversión SVG desde 2023',
-				rights: '© 2023 svgintopng.com - Todos los derechos reservados'
-			},
 			conversions: {
 				png: {
-					title: 'Convertidor de SVG a PNG',
-					description:
-						'Convierte gráficos vectoriales SVG a imágenes PNG con soporte de transparencia. Perfecto para usar gráficos vectoriales en aplicaciones que no admiten SVG.',
-					icon: 'image',
-					whyConvert:
-						'Los archivos PNG admiten transparencia y son ampliamente compatibles con todas las aplicaciones y sitios web. Convertir SVG a PNG es útil cuando necesitas usar tus gráficos vectoriales en aplicaciones que no admiten SVG, o cuando necesitas una imagen raster de tamaño fijo para propósitos específicos.',
-					howToConvert: [
-						'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-						'Espera a que se complete la conversión automática',
-						'Descarga tu archivo PNG convertido'
-					]
+					title: 'Conversión de SVG a PNG',
+					description: 'Convierte tus archivos SVG a imágenes PNG.',
+					descriptionHtml: `<p>Convierte tus <strong>SVG vector files</strong> en imágenes <strong>PNG raster</strong> versátiles. PNG son ideales para uso web, soportando transparencia y sin pérdida de compresión. Perfectos para logos, íconos y gráficos donde la escalabilidad no es la necesidad principal después de la conversión.</p><p>Nuestro herramienta asegura una salida de alta calidad, preservando la fidelidad visual de tu original SVG.</p>`,
+					icon: 'image'
 				},
 				jpg: {
-					title: 'Convertidor de SVG a JPG',
-					description:
-						'Convierte archivos SVG a imágenes JPG con calidad personalizable. Ideal para contenido web y adjuntos de correo electrónico donde el tamaño del archivo importa.',
-					icon: 'image',
-					whyConvert:
-						'Los archivos JPG están altamente comprimidos y son ideales para fotografías o imágenes complejas donde el tamaño del archivo importa. Convertir SVG a JPG es útil cuando necesitas tamaños de archivo más pequeños para uso web, adjuntos de correo electrónico, o cuando no se requiere transparencia.',
-					howToConvert: [
-						'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-						'Espera a que se complete la conversión automática',
-						'Descarga tu archivo JPG convertido'
-					]
+					title: 'Conversión de SVG a JPG',
+					description: 'Transforma tus archivos SVG a formato JPG.',
+					descriptionHtml: `<p>Convierte tus <strong>SVG graphics</strong> en el formato de imagen <strong>JPG</strong> estándar. JPG es excelente para imágenes complejas con muchos colores, como fotografías, usando la compresión con pérdida para lograr tamaños de archivo más pequeños. Tenga en cuenta que la transparencia no se admite en JPG.</p><p>Ideal para situaciones donde el tamaño del archivo es una preocupación importante y no se necesita transparencia.</p>`,
+					icon: 'image'
 				},
 				pdf: {
-					title: 'Convertidor de SVG a PDF',
-					description:
-						'Convierte archivos SVG a documentos PDF manteniendo la calidad vectorial. Perfecto para crear documentos imprimibles a partir de gráficos vectoriales.',
-					icon: 'file-text',
-					whyConvert:
-						'Los archivos PDF son perfectos para documentos y materiales imprimibles. Convertir SVG a PDF mantiene la calidad vectorial mientras crea un formato de documento que es fácil de compartir, imprimir y ver en cualquier dispositivo sin software especial.',
-					howToConvert: [
-						'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-						'Espera a que se complete la conversión automática',
-						'Descarga tu archivo PDF convertido'
-					]
+					title: 'Conversión de SVG a PDF',
+					description: 'Convierte tus archivos SVG a documentos PDF.',
+					descriptionHtml: `<p>Convierta sus <strong>SVG vector files</strong> en documentos <strong>Portable Document Format (PDF)</strong> profesionales accesibles universalmente. PDFs incrustan los datos vectoriales, asegurando que sus gráficos permanezcan nítidos y escalables dentro del documento, perfectos para imprimir y compartir.</p><p>Excelente para dibujos técnicos, informes y documentos que requieren gráficos de alta fidelidad.</p>`,
+					icon: 'file-text'
 				},
 				compress: {
 					title: 'Compresión de SVG',
-					description:
-						'Comprime archivos SVG eliminando datos innecesarios y reduciendo el tamaño del archivo. Hace que los SVG se carguen más rápido y sean más fáciles de trabajar.',
-					icon: 'zap',
-					whyConvert:
-						'Comprimir archivos SVG reduce su tamaño eliminando datos innecesarios, optimizando rutas y minificando código. Esto hace que tus archivos SVG se carguen más rápido en sitios web y aplicaciones mientras mantienen su calidad vectorial.',
-					howToConvert: [
-						'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-						'Espera a que se complete la compresión automática',
-						'Descarga tu archivo SVG comprimido'
-					]
+					description: 'Optimiza y reduce el tamaño de tus archivos SVG.',
+					descriptionHtml: `<p>Reduzca el tamaño de sus <strong>SVG files</strong> significativamente optimizando su código. Nuestro herramienta elimina la información redundante, limpia el código y aplica varias técnicas de optimización usando SVGO.</p><p>Los SVG comprimidos se cargan más rápidos y son más eficientes, perfectos para uso web mientras mantienen la escalabilidad y la calidad.</p>`,
+					icon: 'zap'
 				},
 				view: {
 					title: 'Visor de SVG',
-					description:
-						'Visualiza e inspecciona archivos SVG directamente en tu navegador. No requiere instalación.',
-					icon: 'eye',
-					whyConvert:
-						'Ver archivos SVG en un visor dedicado te permite inspeccionar los gráficos vectoriales, verificar dimensiones y asegurar la calidad antes de usarlos en tus proyectos.',
-					howToConvert: [
-						'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-						'El SVG se mostrará instantáneamente en el visor',
-						'Inspecciona y descarga si es necesario'
-					]
+					description: 'Visualiza rápidamente el contenido de tus archivos SVG.',
+					descriptionHtml: `<p>Use este herramienta para ver instantáneamente el contenido de sus <strong>SVG files</strong>. Vea cómo se representa su gráfico vectorial sin necesidad de software especializado. Útil para verificaciones rápidas y verificación de contenido de archivo.</p>`,
+					icon: 'eye'
 				}
 			},
 			steps: {
 				title: 'Cómo convertir SVG a {format}',
-				upload:
-					'Sube tu archivo SVG arrastrándolo y soltándolo o haciendo clic en el botón "Explorar Archivos"',
-				wait: 'Espera a que se complete la conversión automática',
-				download: 'Descarga tu archivo {format} convertido'
+				upload: 'Sube tu archivo SVG arrastrándolo o usando el botón de explorar.',
+				wait: 'Espera a que se complete el proceso de conversión/compresión.',
+				download: 'Descarga tu archivo {format} convertido.'
+			},
+			privacy:
+				'Tus archivos se procesan de manera segura y se eliminan de nuestros servidores después de 1 hora.',
+			footer: {
+				since: '© 2024',
+				rights: 'Todos los derechos reservados.'
 			}
 		}
-	},
+	} as Translation,
 	th: {
 		title: 'ตัวแปลง SVG',
-		description: 'แปลงไฟล์ SVG ของคุณเป็นรูปแบบต่างๆ ได้ทันที',
-		dragDrop: 'ลากและวางไฟล์ SVG ของคุณที่นี่',
+		description: 'แปลงไฟล์ SVG ของคุณเป็นรูปแบบต่างๆ ทันทีออนไลน์',
+		dragDrop: 'ลากและวางไฟล์ SVG ที่นี่',
 		or: 'หรือ',
 		browseFiles: 'เลือกไฟล์',
-		clearFiles: 'เคลียร์ไฟล์',
+		selectedFiles: 'ไฟล์',
 		convertTo: 'แปลงเป็น',
 		downloadAll: 'ดาวน์โหลดทั้งหมด',
 		formats: {
@@ -256,87 +208,61 @@ export const languages: Record<Language, Translation> = {
 			compress: 'บีบอัด',
 			view: 'ดู'
 		},
+		clearFiles: 'เคลียร์ไฟล์',
+		filesCount: '{count} ไฟล์',
+		fileCount: '{count} ไฟล์',
+		converting: 'แปลงอยู่...',
+		download: 'ดาวน์โหลด',
+		viewerTitle: 'เครื่องมือดู SVG',
+		viewerDescription: 'อัปโหลดหรือลากและวางไฟล์ SVG เพื่อดูเนื้อหาของมัน',
+		uploadToView: 'อัปโหลด SVG เพื่อดู',
 		seo: {
 			baseTitle: 'เครื่องมือแปลง SVG เป็น {format}',
 			domain: 'svgintopng.com',
-			privacy:
-				'การแปลงทั้งหมดเกิดขึ้นในเบราว์เซอร์ของคุณ - ไฟล์ของคุณไม่เคยถูกอัปโหลดไปยังเซิร์ฟเวอร์ของเรา เพื่อความเป็นส่วนตัวและความปลอดภัยที่สมบูรณ์',
-			footer: {
-				since: 'เครื่องมือแปลง SVG ฟรีตั้งแต่ปี 2023',
-				rights: '© 2023 svgintopng.com - สงวนลิขสิทธิ์ทั้งหมด'
-			},
 			conversions: {
 				png: {
-					title: 'เครื่องมือแปลง SVG เป็น PNG',
-					description:
-						'แปลงกราฟิกเวกเตอร์ SVG เป็นรูปภาพ PNG ที่รองรับความโปร่งใส เหมาะสำหรับการใช้กราฟิกเวกเตอร์ในแอปพลิเคชันที่ไม่รองรับ SVG',
-					icon: 'image',
-					whyConvert:
-						'ไฟล์ PNG รองรับความโปร่งใสและเข้ากันได้กับทุกแอปพลิเคชันและเว็บไซต์ การแปลง SVG เป็น PNG มีประโยชน์เมื่อคุณต้องการใช้กราฟิกเวกเตอร์ในแอปพลิเคชันที่ไม่รองรับ SVG หรือเมื่อคุณต้องการภาพแรสเตอร์ขนาดคงที่สำหรับวัตถุประสงค์เฉพาะ',
-					howToConvert: [
-						'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-						'รอให้การแปลงอัตโนมัติเสร็จสมบูรณ์',
-						'ดาวน์โหลดไฟล์ PNG ที่แปลงแล้วของคุณ'
-					]
+					title: 'การแปลง SVG เป็น PNG',
+					description: 'แปลงไฟล์ SVG ของคุณเป็นภาพ PNG คุณภาพสูง',
+					descriptionHtml: `<p>การแปลงกราฟิกเวกเตอร์ SVG เป็นรูปภาพ PNG ที่รองรับความโปร่งใส เหมาะสำหรับการใช้กราฟิกเวกเตอร์ในแอปพลิเคชันที่ไม่รองรับ SVG</p><p>รูปภาพ PNG นี้สำหรับใช้งานบนเว็บไซต์ รองรับความโปร่งใสและการบีบอัดที่ไม่มีการสูญเสียข้อมูล สำหรับใช้งานบนเว็บไซต์หรือการสร้างรูปภาพสำหรับการใช้งานอื่นๆ ที่ไม่ต้องการความโปร่งใส</p>`,
+					icon: 'image'
 				},
 				jpg: {
-					title: 'เครื่องมือแปลง SVG เป็น JPG',
-					description:
-						'แปลงไฟล์ SVG เป็นรูปภาพ JPG ที่มีคุณภาพที่ปรับแต่งได้ เหมาะสำหรับเนื้อหาเว็บและไฟล์แนบอีเมลที่ขนาดไฟล์มีความสำคัญ',
-					icon: 'image',
-					whyConvert:
-						'ไฟล์ JPG มีการบีบอัดสูงและเหมาะสำหรับภาพถ่ายหรือภาพที่ซับซ้อนที่ขนาดไฟล์มีความสำคัญ การแปลง SVG เป็น JPG มีประโยชน์เมื่อคุณต้องการขนาดไฟล์ที่เล็กลงสำหรับการใช้งานบนเว็บ ไฟล์แนบอีเมล หรือเมื่อไม่จำเป็นต้องมีความโปร่งใส',
-					howToConvert: [
-						'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-						'รอให้การแปลงอัตโนมัติเสร็จสมบูรณ์',
-						'ดาวน์โหลดไฟล์ JPG ที่แปลงแล้วของคุณ'
-					]
+					title: 'การแปลง SVG เป็น JPG',
+					description: 'แปลงไฟล์ SVG ของคุณเป็นรูปแบบภาพ JPG มาตรฐาน',
+					descriptionHtml: `<p>การแปลงไฟล์ SVG เป็นรูปภาพ JPG ที่มีคุณภาพที่ปรับแต่งได้ เหมาะสำหรับเนื้อหาเว็บและไฟล์แนบอีเมลที่ขนาดไฟล์มีความสำคัญ</p><p>JPG มีการบีบอัดสูงและเหมาะสำหรับภาพถ่ายหรือภาพที่ซับซ้อนที่ขนาดไฟล์มีความสำคัญ การแปลง SVG เป็น JPG มีประโยชน์เมื่อคุณต้องการขนาดไฟล์ที่เล็กลงสำหรับการใช้งานบนเว็บ ไฟล์แนบอีเมล หรือเมื่อไม่จำเป็นต้องมีความโปร่งใส</p>`,
+					icon: 'image'
 				},
 				pdf: {
-					title: 'เครื่องมือแปลง SVG เป็น PDF',
-					description:
-						'แปลงไฟล์ SVG เป็นเอกสาร PDF โดยรักษาคุณภาพเวกเตอร์ เหมาะสำหรับการสร้างเอกสารที่พิมพ์ได้จากกราฟิกเวกเตอร์',
-					icon: 'file-text',
-					whyConvert:
-						'ไฟล์ PDF เหมาะสำหรับเอกสารและวัสดุที่พิมพ์ได้ การแปลง SVG เป็น PDF รักษาคุณภาพเวกเตอร์ในขณะที่สร้างรูปแบบเอกสารที่ง่ายต่อการแชร์ พิมพ์ และดูบนอุปกรณ์ใดๆ โดยไม่ต้องใช้ซอฟต์แวร์พิเศษ',
-					howToConvert: [
-						'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-						'รอให้การแปลงอัตโนมัติเสร็จสมบูรณ์',
-						'ดาวน์โหลดไฟล์ PDF ที่แปลงแล้วของคุณ'
-					]
+					title: 'การแปลง SVG เป็น PDF',
+					description: 'แปลงไฟล์ SVG ของคุณเป็นเอกสาร PDF ที่เข้าถึงได้สากล',
+					descriptionHtml: `<p>การแปลงไฟล์ SVG เป็นเอกสาร PDF ที่รักษาคุณภาพเวกเตอร์ในขณะที่สร้างรูปแบบเอกสารที่ง่ายต่อการแชร์ พิมพ์ และดูบนอุปกรณ์ใดๆ โดยไม่ต้องใช้ซอฟต์แวร์พิเศษ</p><p>เอกสาร PDF นี้เหมาะสำหรับเอกสารและวัสดุที่พิมพ์ได้ สำหรับการสร้างเอกสารที่พิมพ์ได้จากกราฟิกเวกเตอร์</p>`,
+					icon: 'file-text'
 				},
 				compress: {
 					title: 'การบีบอัด SVG',
-					description:
-						'บีบอัดไฟล์ SVG โดยลบข้อมูลที่ไม่จำเป็นและลดขนาดไฟล์ ทำให้ SVG โหลดเร็วขึ้นและง่ายต่อการทำงาน',
-					icon: 'zap',
-					whyConvert:
-						'การบีบอัดไฟล์ SVG ลดขนาดโดยการลบข้อมูลที่ไม่จำเป็น ปรับเส้นทางให้เหมาะสม และลดขนาดโค้ด ทำให้ไฟล์ SVG ของคุณโหลดเร็วขึ้นบนเว็บไซต์และแอปพลิเคชันในขณะที่รักษาคุณภาพเวกเตอร์',
-					howToConvert: [
-						'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-						'รอให้การบีบอัดอัตโนมัติเสร็จสมบูรณ์',
-						'ดาวน์โหลดไฟล์ SVG ที่บีบอัดแล้วของคุณ'
-					]
+					description: 'ปรับปรุงและลดขนาดไฟล์ SVG ของคุณ',
+					descriptionHtml: `<p>การบีบอัดไฟล์ SVG ลดขนาดโดยการลบข้อมูลที่ไม่จำเป็น ปรับเส้นทางให้เหมาะสม และลดขนาดโค้ด ทำให้ไฟล์ SVG ของคุณโหลดเร็วขึ้นบนเว็บไซต์และแอปพลิเคชันในขณะที่รักษาคุณภาพเวกเตอร์</p><p>การบีบอัดนี้ลดขนาดโดยการลบข้อมูลที่ไม่จำเป็น ปรับเส้นทางให้เหมาะสม และลดขนาดโค้ด ทำให้ไฟล์ SVG ของคุณโหลดเร็วขึ้นบนเว็บไซต์และแอปพลิเคชันในขณะที่รักษาคุณภาพเวกเตอร์</p>`,
+					icon: 'zap'
 				},
 				view: {
 					title: 'เครื่องมือดู SVG',
-					description: 'ดูและตรวจสอบไฟล์ SVG โดยตรงในเบราว์เซอร์ของคุณ ไม่จำเป็นต้องติดตั้ง',
-					icon: 'eye',
-					whyConvert:
-						'การดูไฟล์ SVG ในเครื่องมือดูเฉพาะช่วยให้คุณตรวจสอบกราฟิกเวกเตอร์ ตรวจสอบขนาด และตรวจสอบคุณภาพก่อนใช้ในโปรเจกต์ของคุณ',
-					howToConvert: [
-						'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-						'SVG จะแสดงทันทีในเครื่องมือดู',
-						'ตรวจสอบและดาวน์โหลดหากจำเป็น'
-					]
+					description: 'ดูเนื้อหาไฟล์ SVG ของคุณอย่างรวดเร็ว',
+					descriptionHtml: `<p>การดูไฟล์ SVG ในเครื่องมือดูเฉพาะช่วยให้คุณตรวจสอบกราฟิกเวกเตอร์ ตรวจสอบขนาด และตรวจสอบคุณภาพก่อนใช้ในโปรเจกต์ของคุณ</p>`,
+					icon: 'eye'
 				}
 			},
 			steps: {
 				title: 'วิธีแปลง SVG เป็น {format}',
-				upload: 'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือคลิกที่ปุ่ม "เลือกไฟล์"',
-				wait: 'รอให้การแปลงอัตโนมัติเสร็จสมบูรณ์',
+				upload: 'อัปโหลดไฟล์ SVG ของคุณโดยการลากและวางหรือใช้ปุ่มเลือกไฟล์',
+				wait: 'รอให้กระบวนการแปลง/บีบอัดเสร็จสมบูรณ์',
 				download: 'ดาวน์โหลดไฟล์ {format} ที่แปลงแล้วของคุณ'
+			},
+			privacy:
+				'ไฟล์ของคุณจะถูกประมวลผลอย่างปลอดภัยและถูกลบออกจากเซิร์ฟเวอร์ของเราหลังจาก 1 ชั่วโมง',
+			footer: {
+				since: '© 2024',
+				rights: 'สงวนลิขสิทธิ์ทั้งหมด'
 			}
 		}
-	}
+	} as Translation
 };

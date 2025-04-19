@@ -1,5 +1,7 @@
 import sharp from 'sharp';
 import { json } from '@sveltejs/kit';
+import puppeteer from 'puppeteer';
+import { optimize } from 'svgo';
 
 export async function POST({ request }) {
 	try {
@@ -12,91 +14,75 @@ export async function POST({ request }) {
 		}
 
 		const buffer = await file.arrayBuffer();
-		let sharpInstance = sharp(Buffer.from(buffer));
-
-		// Set default options for better quality
-		const defaultOptions = {
-			density: 300 // Higher density for better quality
-		};
+		const svgContent = Buffer.from(buffer).toString('utf8');
+		let outputBuffer: Buffer;
+		let contentType: string;
+		let outputFilename = file.name.replace('.svg', `.${format}`);
 
 		switch (format) {
 			case 'png':
-				sharpInstance = sharpInstance.png({
-					compressionLevel: 6,
-					quality: 90,
-					palette: true
-				});
-				break;
-			case 'jpg':
-				sharpInstance = sharpInstance.jpeg({
-					quality: 85,
-					progressive: true
-				});
-				break;
-			case 'pdf':
-				// For PDF conversion, we'll use PNG as an intermediate format
-				// since sharp doesn't directly support PDF output
-				sharpInstance = sharpInstance.png({
-					quality: 100,
-					compressionLevel: 9
-				});
-				break;
-			case 'compress':
-				// For SVG compression, we'll optimize the SVG
-				sharpInstance = sharpInstance
-					.png({
-						compressionLevel: 9,
-						quality: 85,
-						palette: true
-					})
-					.resize(800, 800, { fit: 'inside', withoutEnlargement: true });
-				break;
-			default:
-				sharpInstance = sharpInstance.png();
-		}
-
-		const outputBuffer = await sharpInstance.toBuffer();
-
-		// Determine content type based on format
-		let contentType;
-		switch (format) {
-			case 'png':
+				outputBuffer = await sharp(Buffer.from(svgContent)).png().toBuffer();
 				contentType = 'image/png';
 				break;
 			case 'jpg':
+				outputBuffer = await sharp(Buffer.from(svgContent)).jpeg().toBuffer();
 				contentType = 'image/jpeg';
 				break;
 			case 'pdf':
-				contentType = 'application/pdf';
+				try {
+					const browser = await puppeteer.launch({ headless: true });
+					const page = await browser.newPage();
+					await page.setContent(`<html><body>${svgContent}</body></html>`, {
+						waitUntil: 'networkidle0'
+					});
+					const pdfUint8Array = await page.pdf({ format: 'A4', printBackground: true });
+					outputBuffer = Buffer.from(pdfUint8Array);
+					await browser.close();
+					contentType = 'application/pdf';
+				} catch (pdfError) {
+					console.error('PDF generation error:', pdfError);
+					return json({ error: 'Failed to convert SVG to PDF' }, { status: 500 });
+				}
 				break;
 			case 'compress':
-				contentType = 'image/svg+xml';
+				try {
+					const result = optimize(svgContent, {
+						// SVGO options
+						plugins: [
+							{
+								name: 'preset-default',
+								params: {
+									overrides: {
+										// customize default plugin options
+										removeViewBox: false
+									}
+								}
+							}
+						]
+					});
+					outputBuffer = Buffer.from(result.data, 'utf8');
+					contentType = 'image/svg+xml';
+					outputFilename = file.name.replace('.svg', '.compressed.svg'); // Indicate compression
+				} catch (compressError) {
+					console.error('SVG compression error:', compressError);
+					return json({ error: 'Failed to compress SVG' }, { status: 500 });
+				}
 				break;
 			default:
+				// Default to PNG if format is unknown
+				outputBuffer = await sharp(Buffer.from(svgContent)).png().toBuffer();
 				contentType = 'image/png';
-		}
-
-		// Generate a more descriptive filename
-		const originalName = file.name.replace('.svg', '');
-		let filename;
-
-		switch (format) {
-			case 'compress':
-				filename = `${originalName}-compressed.svg`;
-				break;
-			default:
-				filename = `${originalName}.${format}`;
+				outputFilename = file.name.replace('.svg', '.png');
 		}
 
 		return new Response(outputBuffer, {
 			headers: {
 				'Content-Type': contentType,
-				'Content-Disposition': `attachment; filename="${filename}"`,
-				'Cache-Control': 'public, max-age=31536000' // Cache for 1 year
+				'Content-Disposition': `attachment; filename="${outputFilename}"`
 			}
 		});
 	} catch (error) {
-		console.error('Conversion error:', error);
-		return json({ error: 'Failed to convert SVG' }, { status: 500 });
+		console.error('General conversion error:', error);
+		return json({ error: 'Failed to process SVG' }, { status: 500 });
 	}
 }
