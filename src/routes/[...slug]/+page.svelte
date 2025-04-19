@@ -13,9 +13,7 @@
 	import SEO from '$lib/components/SEO.svelte';
 	import { Toaster, toast } from 'svelte-french-toast';
 	import ViewerModal from '$lib/components/ViewerModal.svelte';
-	import type { LayoutData } from '../$types'; // Import from parent layout
 
-	// Import Lucide icons
 	import {
 		ChevronDown,
 		Upload,
@@ -391,13 +389,13 @@
 
 {#if t && currentConversionInfo}
 	<SEO
-		title={seoTitle ?? `${activeTab.toUpperCase()} Converter`}
+		title={currentConversionInfo.title ?? `${activeTab.toUpperCase()} Converter`}
 		description={currentConversionInfo?.description ?? t.description}
 		domain={t.domain ?? 'example.com'}
 	/>
 
 	<div class="min-h-screen bg-base-200">
-		<div class="container mx-auto px-4 py-8">
+		<div class="container max-w-5xl mx-auto px-4 py-8">
 			<!-- Header Section -->
 			<div class="flex justify-between items-center mb-8">
 				<div class="flex items-center gap-3">
@@ -652,8 +650,8 @@
 						<FileImage class="h-6 w-6 inline-block mr-2 text-primary" />
 						{t.domain ?? 'SVG Converter'}
 					</p>
-					<p>{t.footer?.since ?? '© 2024'}</p>
-					<p>{t.footer?.rights ?? 'All rights reserved'}</p>
+					<p>© {new Date().getFullYear()}</p>
+					<p>{t.footer ?? 'All rights reserved'}</p>
 					<p class="mt-4 text-sm text-base-content/70">{t.privacy ?? ''}</p>
 				</div>
 			</footer>
