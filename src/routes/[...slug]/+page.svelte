@@ -241,7 +241,7 @@
 					name: f.file.name,
 					url: '',
 					preview: f.preview,
-					format: activeTab, // Use activeTab
+					format: activeTab,
 					originalFile: f.file,
 					size: f.size
 				}));
