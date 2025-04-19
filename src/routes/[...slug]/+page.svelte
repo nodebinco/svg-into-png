@@ -465,7 +465,7 @@
 				{/if}
 
 				<!-- Format Tabs -->
-				<div class="tabs tabs-boxed mb-8 justify-center bg-base-100 p-1 shadow-md" role="tablist">
+				<div class="card tabs tabs-boxed mb-4 justify-center bg-base-100 p-1 shadow" role="tablist">
 					{#each Object.entries(t.conversions || {}) as [format, info] (format)}
 						<a
 							role="tab"
