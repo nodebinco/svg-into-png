@@ -1,1 +1,26 @@
 @import 'tailwindcss';
+@plugin "daisyui";
+
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark;
+}
+
+:root {
+  --primary: #4ade80;
+  --primary-focus: #22c55e;
+  --primary-content: #ffffff;
+}
+
+[data-theme='light'] {
+  --primary: #4ade80;
+  --primary-focus: #22c55e;
+  --primary-content: #ffffff;
+}
+
+[data-theme='dark'] {
+  --primary: #86efac;
+  --primary-focus: #4ade80;
+  --primary-content: #ffffff;
+}
