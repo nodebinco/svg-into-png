@@ -7,10 +7,10 @@ const DEFAULT_LANG: Language = 'en';
 export const load: LayoutServerLoad = ({ params }) => {
 	// Parse the slug parts
 	const slugParts = params.slug?.split('/') || [];
-	
+
 	// Determine language from slug
 	let lang: Language = DEFAULT_LANG;
-	
+
 	if (slugParts.length > 0) {
 		// Check if first part is a language code
 		if (languages[slugParts[0] as Language]) {

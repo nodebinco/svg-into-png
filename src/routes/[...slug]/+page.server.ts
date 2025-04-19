@@ -16,12 +16,12 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	// Determine format from URL
 	let initialFormat: Format = defaultFormat;
-	
+
 	// Check if we have a conversion format in the slug
 	// If the first part is a language code, look at the second part
 	// Otherwise look at the first part
 	let formatSlug = '';
-	
+
 	if (slugParts.length > 0) {
 		if (slugParts[0] === lang && slugParts.length > 1) {
 			// If first part is language, check second part for format
@@ -42,10 +42,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	if (!initialConversionInfo) {
 		// This case might happen if i18n data is inconsistent for the format
-		throw error(
-			500,
-			`Conversion format '${initialFormat}' not found for language '${lang}'.`
-		);
+		throw error(500, `Conversion format '${initialFormat}' not found for language '${lang}'.`);
 	}
 
 	return {

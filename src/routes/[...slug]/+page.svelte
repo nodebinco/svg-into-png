@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
-	import { page } from '$app/stores';
-	import Logo from '$lib/components/Logo.svelte';
+	import { goto, preloadData } from '$app/navigation';
 	import {
 		languages,
 		type Language,
@@ -15,6 +14,19 @@
 	import { Toaster, toast } from 'svelte-french-toast';
 	import ViewerModal from '$lib/components/ViewerModal.svelte';
 	import type { LayoutData } from '../$types'; // Import from parent layout
+
+	// Import Lucide icons
+	import {
+		ChevronDown,
+		Upload,
+		Download,
+		Eye,
+		Image,
+		FileText,
+		Zap,
+		Trash2,
+		FileImage
+	} from 'lucide-svelte';
 
 	// Data from this page's +page.server.ts
 	export let data: {
@@ -61,9 +73,10 @@
 	// Reactive values based on activeTab and layout context
 	$: currentFormat = activeTab; // Use activeTab now
 	$: currentConversionInfo = t?.conversions?.[activeTab] || {};
-	
+
 	// Get the format URL segment based on the current format
-	$: formatUrlSegment = Object.entries(slugToFormat).find(([_, fmt]) => fmt === currentFormat)?.[0] || 'svg-to-png';
+	$: formatUrlSegment =
+		Object.entries(slugToFormat).find(([_, fmt]) => fmt === currentFormat)?.[0] || 'svg-to-png';
 
 	// Reactive SEO data
 	$: seoTitle =
@@ -71,24 +84,65 @@
 		' - ' +
 		t?.domain;
 
-	function handleTabClick(format: Format) {
-		if (activeTab !== format) {
-			// Get the URL path for this format
-			const formatSlug = Object.entries(slugToFormat).find(([_, fmt]) => fmt === format)?.[0];
-			if (formatSlug) {
-				// Navigate to the new URL with proper language and format
-				const newUrl = lang === 'en' ? `/${formatSlug}` : `/${lang}/${formatSlug}`;
-				window.location.href = newUrl;
-				return;
-			}
-			
-			// If no URL available, just update the tab (fallback behavior)
-			activeTab = format;
-			// Clear the queue when changing tabs to avoid confusion
-			clearQueue();
-			if (format === 'view') {
-				viewerContent = ''; // Reset viewer content
-			}
+	// Language display names
+	const languageNames: Record<string, string> = {
+		en: 'English (EN)',
+		th: 'ภาษาไทย (TH)',
+		es: 'Español (ES)',
+		fr: 'Français (FR)',
+		de: 'Deutsch (DE)',
+		it: 'Italiano (IT)',
+		ja: '日本語 (JA)',
+		ko: '한국어 (KO)',
+		pt: 'Português (PT)',
+		ru: 'Русский (RU)',
+		zh: '中文 (ZH)'
+	};
+
+	// Add function to generate URL for formats
+	function getFormatUrl(format: Format): string {
+		const formatSlug = Object.entries(slugToFormat).find(([_, fmt]) => fmt === format)?.[0];
+		if (formatSlug) {
+			return lang === 'en' ? `/${formatSlug}` : `/${lang}/${formatSlug}`;
+		}
+		return '#'; // Fallback
+	}
+
+	function handleTabClick(format: Format, event: MouseEvent) {
+		// If it's the current tab or the user used ctrl/cmd+click to open in a new tab, don't prevent default
+		if (activeTab === format || event.ctrlKey || event.metaKey) {
+			return;
+		}
+
+		// Prevent default navigation for normal clicks
+		event.preventDefault();
+
+		// Get the URL path for this format
+		const formatSlug = Object.entries(slugToFormat).find(([_, fmt]) => fmt === format)?.[0];
+		if (formatSlug) {
+			// Navigate to the new URL with proper language and format
+			const newUrl = lang === 'en' ? `/${formatSlug}` : `/${lang}/${formatSlug}`;
+
+			// Use direct location change instead of goto for more reliable navigation
+			// window.location.href = newUrl;
+			goto(newUrl, { replaceState: true });
+		}
+
+		// If no URL available, just update the tab (fallback behavior)
+		activeTab = format;
+		// Clear the queue when changing tabs to avoid confusion
+		clearQueue();
+		if (format === 'view') {
+			viewerContent = ''; // Reset viewer content
+		}
+	}
+
+	// Add preload functionality for smoother tab changes
+	function handleTabHover(format: Format) {
+		const formatSlug = Object.entries(slugToFormat).find(([_, fmt]) => fmt === format)?.[0];
+		if (formatSlug) {
+			const prefetchUrl = lang === 'en' ? `/${formatSlug}` : `/${lang}/${formatSlug}`;
+			preloadData(prefetchUrl);
 		}
 	}
 
@@ -347,7 +401,7 @@
 			<!-- Header Section -->
 			<div class="flex justify-between items-center mb-8">
 				<div class="flex items-center gap-3">
-					<Logo size="h-10 w-10" />
+					<FileImage class="h-10 w-10 text-primary" />
 					<!-- Header title changes based on active tab -->
 					<h1 class="text-4xl font-bold text-primary">
 						<span class="text-primary">SVG</span>
@@ -360,18 +414,8 @@
 				<!-- Language Selector Dropdown (Only languages) -->
 				<div class="dropdown dropdown-end">
 					<label tabindex="0" class="btn btn-ghost">
-						{lang?.toUpperCase()}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-5 w-5 ml-1"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							><path
-								fill-rule="evenodd"
-								d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							/></svg
-						>
+						{languageNames[lang] || lang?.toUpperCase()}
+						<ChevronDown class="h-5 w-5 ml-1" />
 					</label>
 					<ul
 						tabindex="0"
@@ -381,7 +425,7 @@
 							{#if langCode !== lang}
 								<li>
 									<a href={getLangFormatUrl(langCode)} class="btn btn-ghost justify-start"
-										>{langCode.toUpperCase()}</a
+										>{languageNames[langCode] || langCode.toUpperCase()}</a
 									>
 								</li>
 							{/if}
@@ -404,80 +448,27 @@
 				<!-- Format Tabs -->
 				<div class="tabs tabs-boxed mb-8 justify-center bg-base-100 p-1 shadow-md" role="tablist">
 					{#each Object.entries(t.conversions || {}) as [format, info] (format)}
-						<button
+						<a
 							role="tab"
-							class="tab tab-lg gap-2 font-medium {activeTab === format
+							href={getFormatUrl(format as Format)}
+							class="tab tab-lg gap-2 font-medium no-underline {activeTab === format
 								? 'tab-active !bg-primary !text-primary-content'
 								: 'hover:bg-base-200'}"
 							aria-selected={activeTab === format}
-							on:click={() => handleTabClick(format as Format)}
+							on:click={(e) => handleTabClick(format as Format, e)}
+							on:mouseenter={() => handleTabHover(format as Format)}
 						>
 							{#if info?.icon === 'image'}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle
-										cx="8.5"
-										cy="8.5"
-										r="1.5"
-									/><polyline points="21 15 16 10 5 21" /></svg
-								>
+								<Image class="h-5 w-5" />
 							{:else if info?.icon === 'file-text'}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline
-										points="14 2 14 8 20 8"
-									/><line x1="16" y1="13" x2="8" y2="13" /><line
-										x1="16"
-										y1="17"
-										x2="8"
-										y2="17"
-									/><polyline points="10 9 9 9 8 9" /></svg
-								>
+								<FileText class="h-5 w-5" />
 							{:else if info?.icon === 'zap'}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
-								>
+								<Zap class="h-5 w-5" />
 							{:else if info?.icon === 'eye'}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
-										cx="12"
-										cy="12"
-										r="3"
-									/></svg
-								>
+								<Eye class="h-5 w-5" />
 							{/if}
 							{t.formats[format as Format]}
-						</button>
+						</a>
 					{/each}
 				</div>
 
@@ -493,40 +484,18 @@
 					>
 						<!-- Viewer Upload Content -->
 						<div class="flex flex-col items-center justify-center gap-6">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								class="h-16 w-16 text-primary mb-4"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
-									cx="12"
-									cy="12"
-									r="3"
-								/></svg
-							>
-							<h2 class="text-2xl font-bold">{t.viewerTitle}</h2>
-							<p class="text-xl font-medium">{t.viewerDescription}</p>
-							<p class="text-base text-base-content/70">{t.or}</p>
+							<Eye class="h-16 w-16 text-primary mb-4" />
+							<div>
+								<h2 class="text-2xl font-bold mb-2">{t.viewerTitle ?? 'SVG Viewer'}</h2>
+								<p class="text-xl font-medium">
+									{t.viewerDescription ?? 'Upload an SVG to view it'}
+								</p>
+								<p class="text-base text-base-content/70 mt-2">{t.or}</p>
+							</div>
 							<div class="flex gap-4">
 								<label class="btn btn-primary btn-lg text-lg gap-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										class="h-6 w-6"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
-											points="17 8 12 3 7 8"
-										/><line x1="12" y1="3" x2="12" y2="15" /></svg
-									>
-									{t.uploadToView}
+									<Upload class="h-6 w-6" />
+									{t.uploadToView ?? 'Upload SVG File'}
 									<input
 										type="file"
 										accept=".svg"
@@ -550,7 +519,7 @@
 					>
 						<!-- Conversion Dropzone Content -->
 						<div class="flex flex-col items-center justify-center gap-6">
-							<Logo size="h-16 w-16" />
+							<FileImage class="h-16 w-16 text-primary" />
 							<div>
 								{#if activeTab === 'compress'}
 									<h2 class="text-2xl font-bold mb-2">{t.compressTitle}</h2>
@@ -567,19 +536,7 @@
 							</div>
 							<div class="flex gap-4">
 								<label class="btn btn-primary btn-lg text-lg gap-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										class="h-6 w-6"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
-											points="17 8 12 3 7 8"
-										/><line x1="12" y1="3" x2="12" y2="15" /></svg
-									>
+									<Upload class="h-6 w-6" />
 									{t.browseFiles}
 									<input
 										type="file"
@@ -605,24 +562,7 @@
 										.formats[activeTab]})
 								</h2>
 								<button class="btn btn-error btn-sm gap-2" on:click={clearQueue}>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										class="h-5 w-5"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										><path d="M3 6h18" /><path
-											d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-										/><line x1="10" y1="11" x2="10" y2="17" /><line
-											x1="14"
-											y1="11"
-											x2="14"
-											y2="17"
-										/></svg
-									>
+									<Trash2 class="h-5 w-5" />
 									{t.clearFiles ?? 'Clear All'}
 								</button>
 							</div>
@@ -672,19 +612,7 @@
 													download={file.name}
 													class="btn btn-primary {!file.url && 'btn-disabled'} gap-2"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														class="h-5 w-5"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
-															points="7 10 12 15 17 10"
-														/><line x1="12" y1="15" x2="12" y2="3" /></svg
-													>
+													<Download class="h-5 w-5" />
 													{t.download}
 												</a>
 											</div>
@@ -700,19 +628,7 @@
 								on:click={downloadAll}
 								disabled={displayedFiles.filter((f) => f.url).length === 0}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-6 w-6"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
-										points="7 10 12 15 17 10"
-									/><line x1="12" y1="15" x2="12" y2="3" /></svg
-								>
+								<Download class="h-6 w-6" />
 								{t.downloadAll} ({t.formats[activeTab]})
 							</button>
 						</div>
@@ -723,9 +639,7 @@
 
 				<!-- SEO Content Area (Updates with activeTab) -->
 				{#if currentConversionInfo?.descriptionHtml}
-					<div
-						class="mt-16 prose prose-lg max-w-5xl mx-auto bg-base-100 p-8 rounded-lg shadow"
-					>
+					<div class="mt-16 prose prose-lg max-w-5xl mx-auto bg-base-100 p-8 rounded-lg shadow">
 						{@html currentConversionInfo.descriptionHtml}
 					</div>
 				{/if}
@@ -735,7 +649,7 @@
 			<footer class="footer footer-center p-10 mt-16 text-base-content">
 				<div>
 					<p class="font-bold">
-						<Logo size="h-6 w-6 inline-block mr-2" />
+						<FileImage class="h-6 w-6 inline-block mr-2 text-primary" />
 						{t.domain ?? 'SVG Converter'}
 					</p>
 					<p>{t.footer?.since ?? '© 2024'}</p>
