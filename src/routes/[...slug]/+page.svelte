@@ -438,11 +438,11 @@
 					</label>
 					<ul
 						tabindex="0"
-						class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50"
+						class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-60 z-50"
 					>
 						{#each Object.keys(languages) as langCode (langCode)}
 							{#if langCode !== lang}
-								<li>
+								<li class="text-left">
 									<a href={getLangFormatUrl(langCode)} class="btn btn-ghost justify-start"
 										>{languageNames[langCode] || langCode.toUpperCase()}</a
 									>
